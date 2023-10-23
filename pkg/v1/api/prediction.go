@@ -51,7 +51,7 @@ type Prediction struct {
   // When this prediction was made, can be used for determining when to
   // refresh a prediction or predictions
   PredictionTime    time.Time
-  stop              *Stop
+  Stop              *Stop
   agency            *Agency
 }
 
@@ -149,7 +149,7 @@ func unmarshalPredictionServiceRoutes(v interface{}, stop *Stop) ([]*Prediction,
     for _, pred := range spPreds {
       p := &Prediction{
         agency: stop.agency,
-        stop: stop,
+        Stop: stop,
         PredictionTime: now,
       }
 
