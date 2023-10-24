@@ -36,6 +36,12 @@ func WithMaxCacheAge(seconds int) ApiOption {
   }
 }
 
+func WithHttpClient(c *http.Client) ApiOption {
+  return func(a *ApiHandler) {
+    a.c = c
+  }
+}
+
 type ApiHandler struct {
   cfg         *GetConfig
   // cache to hold retrieved agencies to prevent
@@ -43,6 +49,7 @@ type ApiHandler struct {
   agencies    []*Agency
   cacheAge    time.Time
   cacheMaxAge time.Duration
+  c           *http.Client
 }
 
 func (a *ApiHandler) Get(m ApiMethod) (*ApiResponse) {
@@ -67,7 +74,7 @@ func (a *ApiHandler) Get(m ApiMethod) (*ApiResponse) {
       defer cancel()
     }
 
-    resp = get(cctx, m, cfg.CustomHeaders)
+    resp = get(cctx, m, cfg.CustomHeaders, a.c)
     if resp.Error() != nil {
       time.Sleep(time.Duration(cfg.RetryDelay)*time.Millisecond)
       continue
@@ -186,6 +193,7 @@ func NewApiHandler(cfg *GetConfig, opts... ApiOption) *ApiHandler {
   h := &ApiHandler{
     cfg: cfg,
     cacheMaxAge: time.Duration(3600),
+    c: http.DefaultClient,
   }
 
   for _, opt := range opts {
@@ -316,7 +324,7 @@ func (ar *ApiResponse) Error() error {
   return ar.err
 }
 
-func get(ctx context.Context, m ApiMethod, headers map[string]string) (*ApiResponse) {
+func get(ctx context.Context, m ApiMethod, headers map[string]string, c *http.Client) (*ApiResponse) {
   apiCmd := m()
   apiResp := &ApiResponse{}
   
@@ -331,7 +339,7 @@ func get(ctx context.Context, m ApiMethod, headers map[string]string) (*ApiRespo
     }
   }
 
-  resp, err := http.DefaultClient.Do(request)
+  resp, err := c.Do(request)
   apiResp.Response = resp
   apiResp.err = err
   if err != nil {
